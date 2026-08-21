@@ -36,7 +36,7 @@ actor LocalWatchlistBackend: WatchlistBackend {
     private let url: URL
 
     init() {
-        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        let base = AppDirectories.support
         try? FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)
         url = base.appendingPathComponent("watchlist.json")
     }

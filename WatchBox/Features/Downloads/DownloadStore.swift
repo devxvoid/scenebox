@@ -28,7 +28,7 @@ final class DownloadStore {
 
     init(settings: AppSettings? = nil) {
         self.settings = settings ?? .shared
-        let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        let documents = AppDirectories.documents
         root = documents.appendingPathComponent("Downloads", isDirectory: true)
         try? FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         BackupExclusion.exclude(root)

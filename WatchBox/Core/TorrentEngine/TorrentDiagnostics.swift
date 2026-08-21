@@ -85,7 +85,7 @@ final class TorrentDiagnostics {
     @ObservationIgnored private let pathMonitor = NWPathMonitor()
 
     static var metricsFileURL: URL {
-        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        AppDirectories.documents
             .appendingPathComponent("diagnostics/metrics.jsonl")
     }
 

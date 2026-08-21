@@ -9,7 +9,7 @@ import Foundation
 
 nonisolated enum StreamCache {
     static var root: URL {
-        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        let base = AppDirectories.support
         let url = base.appendingPathComponent("Streams", isDirectory: true)
         if !FileManager.default.fileExists(atPath: url.path) {
             try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
