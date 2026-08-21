@@ -1,19 +1,27 @@
 #!/bin/bash
-# Unsigned iOS .ipa for sideloading (Sideloadly / AltStore re-sign it).
-# Usage: scripts/export-ipa.sh [version]
+# Unsigned .ipa for sideloading (Sideloadly / AltStore re-sign it).
+# Usage: scripts/export-ipa.sh [version] [ios|tvos]
 set -euo pipefail
 
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
 SCHEME=WatchBox
 APP_NAME=SceneBox
 VERSION="${1:-}"
-OUT="$REPO/build/ios"
+PLATFORM="${2:-ios}"
+
+case "$PLATFORM" in
+  ios)  DEST='generic/platform=iOS';  PRODUCTS=Release-iphoneos; SUFFIX="" ;;
+  tvos) DEST='generic/platform=tvOS'; PRODUCTS=Release-appletvos; SUFFIX="-tvOS" ;;
+  *) echo "platform must be ios or tvos"; exit 1 ;;
+esac
+
+OUT="$REPO/build/$PLATFORM"
 DERIVED="$OUT/DerivedData"
 rm -rf "$OUT"; mkdir -p "$OUT"
 
-echo "==> Building (iOS device, Release, unsigned)"
+echo "==> Building ($PLATFORM device, Release, unsigned)"
 xcodebuild -project "$REPO/WatchBox.xcodeproj" -scheme "$SCHEME" \
-  -destination 'generic/platform=iOS' \
+  -destination "$DEST" \
   -configuration Release \
   -derivedDataPath "$DERIVED" \
   ${VERSION:+MARKETING_VERSION="$VERSION"} \
@@ -21,7 +29,7 @@ xcodebuild -project "$REPO/WatchBox.xcodeproj" -scheme "$SCHEME" \
   build \
   | grep -E "error:|BUILD (SUCCEEDED|FAILED)" || true
 
-APP=$(find "$DERIVED/Build/Products/Release-iphoneos" -maxdepth 1 -name "*.app" | head -1)
+APP=$(find "$DERIVED/Build/Products/$PRODUCTS" -maxdepth 1 -name "*.app" | head -1)
 [ -n "$APP" ] || { echo "!! build failed"; exit 1; }
 
 echo "==> Packaging IPA"
@@ -31,10 +39,9 @@ cp -R "$APP" "$STAGE/"
 find "$STAGE" -name "_CodeSignature" -type d -prune -exec rm -rf {} +
 find "$STAGE" -name "embedded.mobileprovision" -delete
 
-IPA="$OUT/$APP_NAME${VERSION:+-$VERSION}.ipa"
+IPA="$OUT/$APP_NAME${VERSION:+-$VERSION}$SUFFIX.ipa"
 (cd "$OUT" && zip -qry "$IPA" Payload)
 rm -rf "$STAGE"
 
 echo ""
 echo "==== READY: $IPA ($(du -h "$IPA" | cut -f1)) ===="
-echo "Install with Sideloadly."

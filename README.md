@@ -45,7 +45,8 @@ Security rules restrict every client to its own `users/{uid}` subtree.
 
 ```
 scripts/release-mac.sh 1.0.0    # signed + notarized DMG
-scripts/export-ipa.sh 1.0.0     # unsigned IPA for sideloading
+scripts/export-ipa.sh 1.0.0        # unsigned iOS IPA for sideloading
+scripts/export-ipa.sh 1.0.0 tvos   # unsigned tvOS IPA for sideloading
 ```
 
 ## Debug flags
