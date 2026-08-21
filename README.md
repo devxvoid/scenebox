@@ -3,6 +3,17 @@
 ![SceneBox on Mac and iPhone](website/images/mac-detail.png)
 
 Torrent streaming client for iOS, iPadOS, tvOS and Mac (Catalyst), written in SwiftUI.
+
+## Important
+
+SceneBox is a media player and BitTorrent/HTTP client. It does not provide, host, index, upload, store, or distribute any media content, and it has no affiliation with any content source.
+
+- All catalog metadata, stream listings, and media files come from third-party services and peers that users configure or connect to. These services are independent of SceneBox, are not operated, controlled, endorsed, or reviewed by its author, and may be changed or removed at any time.
+- Users are solely responsible for the content they choose to access, for ensuring they have the legal right to do so, and for complying with the copyright and other laws of their jurisdiction. The author does not encourage, condone, or accept responsibility for any infringing use.
+- The software is provided "as is", without warranty of any kind, for personal and lawful use only. See [LICENSE](LICENSE).
+
+If you are a rights holder and believe a third-party source accessible through this software infringes your rights, please contact that source directly, as the author has no control over it.
+
 Sources come from Stremio-compatible addons. Streams play through a vendored
 libtorrent engine and a local HTTP server feeding VLC; debrid-cached releases
 play directly over HTTPS.
