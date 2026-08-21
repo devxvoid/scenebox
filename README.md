@@ -3,7 +3,6 @@
 ![SceneBox on Mac and iPhone](website/images/mac-detail.png)
 
 Torrent streaming client for iOS, iPadOS, tvOS and Mac (Catalyst), written in SwiftUI.
-
 Sources come from Stremio-compatible addons. Streams play through a vendored
 libtorrent engine and a local HTTP server feeding VLC; debrid-cached releases
 play directly over HTTPS.
@@ -44,7 +43,7 @@ Security rules restrict every client to its own `users/{uid}` subtree.
 ## Releases
 
 ```
-scripts/release-mac.sh 1.0.0    # signed + notarized DMG
+scripts/release-mac.sh 1.0.0       # signed + notarized DMG
 scripts/export-ipa.sh 1.0.0        # unsigned iOS IPA for sideloading
 scripts/export-ipa.sh 1.0.0 tvos   # unsigned tvOS IPA for sideloading
 ```
@@ -56,3 +55,11 @@ scripts/export-ipa.sh 1.0.0 tvos   # unsigned tvOS IPA for sideloading
 - `-WBAutoSeekScript '40:+300,80:-120'` – scripted seeks
 
 Metrics are written to `Documents/diagnostics/metrics.jsonl` in Debug builds.
+
+## Contact
+
+Questions, bug reports or feature ideas are welcome.
+
+- **X / Twitter:** [@spontaneousarray](https://x.com/spontaneousarray) — follow for updates, or just ask me there
+- **Email:** [spontaneousarray@gmail.com](mailto:spontaneousarray@gmail.com)
+- **Issues:** open one on this repo for anything reproducible
