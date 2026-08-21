@@ -145,6 +145,12 @@ private struct TransportRow: View {
                                 .glassEffect(.regular.interactive(), in: Circle())
                                 .contentShape(Rectangle())
                         } else {
+                            Image(systemName: player.isPlaying ? "pause.fill" : "play.fill")
+                                .font(.system(size: glyph, weight: .semibold))
+                                .foregroundStyle(.white)
+                                .frame(width: playSize, height: playSize)
+                                .background(.white.opacity(0.18), in: Circle())
+                                .contentShape(Rectangle())
                         }
                     }
                 }
