@@ -60,6 +60,6 @@ Metrics are written to `Documents/diagnostics/metrics.jsonl` in Debug builds.
 
 Questions, bug reports or feature ideas are welcome.
 
-- **X / Twitter:** [@spontaneousarray](https://x.com/spontaneousarray) — follow for updates, or just ask me there
+- **X / Twitter:** [@donbytyqi](https://x.com/donbytyqi) — follow for updates, or just ask me there
 - **Email:** [spontaneousarray@gmail.com](mailto:spontaneousarray@gmail.com)
 - **Issues:** open one on this repo for anything reproducible
