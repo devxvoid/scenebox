@@ -63,3 +63,9 @@ Questions, bug reports or feature ideas are welcome.
 - **X / Twitter:** [@donbytyqi](https://x.com/donbytyqi) — follow for updates, or just ask me there
 - **Email:** [spontaneousarray@gmail.com](mailto:spontaneousarray@gmail.com)
 - **Issues:** open one on this repo for anything reproducible
+
+## License
+
+Personal, non-commercial use only. You may read the source and build it for
+yourself; you may not sell it, redistribute it, or use it in a commercial
+product or service. See [LICENSE](LICENSE).
