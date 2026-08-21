@@ -20,9 +20,14 @@ play directly over HTTPS.
 
 ## Building
 
+To build this yourself you need:
+
 1. Xcode 16 or later. Packages resolve on first open.
-2. Your own `GoogleService-Info.plist` from Firebase at the repo root.
-3. Set your own `DEVELOPMENT_TEAM` for device builds.
+2. A Firebase project of your own. Download its `GoogleService-Info.plist` and
+   put it at the repo root (it is not included in this repo). Enable
+   Email/Password auth, Firestore and Storage in the Firebase console.
+3. An Apple Developer account. Set `DEVELOPMENT_TEAM` in the project to your
+   team for device builds, notarized Mac builds and signing.
 
 The engine is prebuilt; Xcode links the xcframework and does not compile
 `TorrentEngine.mm`. Rebuild scripts live in `~/libtorrent-build/`.
