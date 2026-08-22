@@ -19,7 +19,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
 
 enum ScreenOrientation {
     static var deviceDefault: UIInterfaceOrientationMask {
-        UIDevice.current.userInterfaceIdiom == .pad || Platform.isMac ? .all : .portrait
+        UIDevice.current.userInterfaceIdiom == .pad || Platform.isMac ? .all : .allButUpsideDown
     }
 
     static func landscape() {
@@ -31,7 +31,7 @@ enum ScreenOrientation {
     static func reset() {
         guard !Platform.isMac else { return }
         AppDelegate.mask = deviceDefault
-        if UIDevice.current.userInterfaceIdiom != .pad { request(.portrait) }
+        request(deviceDefault)
     }
 
     private static func request(_ orientations: UIInterfaceOrientationMask) {

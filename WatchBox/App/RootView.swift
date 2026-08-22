@@ -23,7 +23,11 @@ struct RootView: View {
                 }
                 .preferredColorScheme(.dark)
             case .signedOut:
-                LoginView()
+                if auth.isGuest, profiles.selected != nil {
+                    RootTabView()
+                } else {
+                    LoginView()
+                }
             case .signedIn:
                 if profiles.selected != nil {
                     RootTabView()
@@ -57,14 +61,27 @@ struct RootView: View {
                 profiles.activate(uid: uid)
                 CloudSettingsSync.shared.activate(uid: uid)
             case .signedOut:
-                profiles.deactivate()
+                if auth.isGuest { profiles.activateGuest() } else { profiles.deactivate() }
                 CloudSettingsSync.shared.deactivate()
             case .loading:
                 break
             }
         }
+        .onChange(of: auth.isGuest) { _, guest in
+            guard case .signedOut = auth.state else { return }
+            if guest { profiles.activateGuest() } else { profiles.deactivate() }
+        }
         .onChange(of: profiles.selected?.id, initial: true) { _, profileID in
             if case .signedIn(let uid, _) = auth.state, let profileID {
+                if auth.pendingGuestMigration {
+                    auth.pendingGuestMigration = false
+                    Task {
+                        await GuestMigration.migrate(uid: uid, profileID: profileID)
+                        WatchProgressStore.shared.use(FirestoreWatchProgressBackend(uid: uid, profileID: profileID))
+                        WatchlistStore.shared.use(FirestoreWatchlistBackend(uid: uid, profileID: profileID))
+                    }
+                    return
+                }
                 WatchProgressStore.shared.use(FirestoreWatchProgressBackend(uid: uid, profileID: profileID))
                 WatchlistStore.shared.use(FirestoreWatchlistBackend(uid: uid, profileID: profileID))
             } else {

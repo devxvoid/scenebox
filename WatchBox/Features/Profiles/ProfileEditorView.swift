@@ -119,7 +119,9 @@ struct ProfileEditorView: View {
 
                     ProfileAvatar(profile: draft, size: avatarSize, preview: pickedImage)
 
-                    photoControls
+                    if !profiles.isGuest {
+                        photoControls
+                    }
 
                     TextField("Name", text: $name)
                         .textContentType(.name)
@@ -156,7 +158,7 @@ struct ProfileEditorView: View {
                     .foregroundStyle(Theme.onAccent)
                     .disabled(!canSave)
 
-                    if existing != nil {
+                    if existing != nil, !profiles.isGuest {
                         Button("Delete profile", role: .destructive) { confirmDelete = true }
                             .buttonStyle(.bordered)
                             .tint(.red)

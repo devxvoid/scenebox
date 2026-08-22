@@ -16,6 +16,7 @@ struct ProfileView: View {
     @State private var confirmClearDownloads = false
     @State private var confirmClearStreamCache = false
     @State private var confirmSignOut = false
+    @State private var showLogin = false
     @State private var streamCacheBytes: Int64 = 0
 
     var body: some View {
@@ -30,28 +31,19 @@ struct ProfileView: View {
                     }
                     .listRowBackground(Color.clear)
                     .listRowInsets(EdgeInsets())
-
+                    #if os(tvOS)
                     Section {
-                        Button {
-                            editing = .edit(profile)
-                        } label: {
-                            Label("Edit profile", systemImage: "pencil")
-                        }
-                        Button {
-                            profiles.deselect()
-                        } label: {
-                            Label("Switch profile", systemImage: "person.2")
-                        }
-                        if profiles.profiles.count < Profile.maxPerAccount {
-                            Button {
-                                editing = .create(first: false)
-                            } label: {
-                                Label("Add profile", systemImage: "plus.circle")
+                        if profiles.isGuest {
+                            Button("Sign in or create account") { showLogin = true }
+                        } else {
+                            Button("Switch profile") { profiles.deselect() }
+                            if profiles.profiles.count < Profile.maxPerAccount {
+                                Button("Add profile") { editing = .create(first: false) }
                             }
+                            Button("Sign out", role: .destructive) { confirmSignOut = true }
                         }
-                    } footer: {
-                        Text("Each profile keeps its own Continue Watching and watchlist.")
                     }
+                    #endif
                 }
 
                 Section("Stream quality") {
@@ -265,17 +257,34 @@ struct ProfileView: View {
                     NavigationLink("Credits") { CreditsView() }
                 } header: {
                     Text("About")
-                }
-
-                Section {
-                    if let email = auth.email {
-                        LabeledContent("Email", value: email)
-                    }
-                    Button("Sign out", role: .destructive) { confirmSignOut = true }
-                } header: {
-                    Text("Account")
                 } footer: {
                     Text("SceneBox \(appVersion) (\(buildNumber))")
+                }
+            }
+            .toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    Menu {
+                        if profiles.isGuest {
+                            Button { showLogin = true } label: {
+                                Label("Sign in or create account", systemImage: "person.crop.circle.badge.plus")
+                            }
+                        } else {
+                            Button { profiles.deselect() } label: {
+                                Label("Switch profile", systemImage: "person.2")
+                            }
+                            if profiles.profiles.count < Profile.maxPerAccount {
+                                Button { editing = .create(first: false) } label: {
+                                    Label("Add profile", systemImage: "plus.circle")
+                                }
+                            }
+                            Divider()
+                            Button(role: .destructive) { confirmSignOut = true } label: {
+                                Label("Sign out", systemImage: "rectangle.portrait.and.arrow.right")
+                            }
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
+                    }
                 }
             }
             .hideScrollBackground()
@@ -308,6 +317,10 @@ struct ProfileView: View {
             ProfileEditorView(mode: mode)
                 .environment(profiles)
         }
+        .sheet(isPresented: $showLogin) {
+            LoginView(isSheet: true)
+                .environment(auth)
+        }
         .alert("Sign out?", isPresented: $confirmSignOut) {
             Button("Sign out", role: .destructive) { auth.signOut() }
             Button("Cancel", role: .cancel) {}
@@ -317,23 +330,56 @@ struct ProfileView: View {
     }
 
     private func profileHeader(_ profile: Profile) -> some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 14) {
             #if os(tvOS)
             ProfileAvatar(profile: profile, size: 180)
             #else
             ProfileAvatar(profile: profile, size: 110)
             #endif
-            Text(profile.name)
-                .font(.title2.weight(.semibold))
-                .foregroundStyle(.white)
-            if let email = auth.email {
-                Text(email)
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+            VStack(spacing: 6) {
+                Text(profile.name)
+                    .font(.title2.weight(.semibold))
+                    .foregroundStyle(.white)
+                if profiles.isGuest {
+                    Text("Guest · progress is saved on this device")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                } else if let email = auth.email {
+                    Text(email)
+                        .font(.body)
+                        .foregroundStyle(.secondary)
+                }
             }
+            HStack(spacing: 12) {
+                Button {
+                    editing = .edit(profile)
+                } label: {
+                    Label("Edit Profile", systemImage: "pencil")
+                        .font(.subheadline.weight(.semibold))
+                        .padding(.horizontal, 18)
+                        .padding(.vertical, 10)
+                }
+                .buttonStyle(.bordered)
+                .tint(.white)
+                if profiles.isGuest {
+                    Button {
+                        showLogin = true
+                    } label: {
+                        Label("Sign in", systemImage: "person.crop.circle")
+                            .font(.subheadline.weight(.semibold))
+                            .padding(.horizontal, 18)
+                            .padding(.vertical, 10)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(Theme.accent)
+                    .foregroundStyle(Theme.onAccent)
+                }
+            }
+            .padding(.top, 4)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 12)
+        .padding(.top, 8)
+        .padding(.bottom, 24)
     }
 
     private var portBinding: Binding<Int> {

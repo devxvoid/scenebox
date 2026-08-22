@@ -19,6 +19,8 @@ final class AuthStore {
     }
 
     private(set) var state: State = .loading
+    private(set) var isGuest = UserDefaults.standard.bool(forKey: "guestMode")
+    var pendingGuestMigration = false
     private(set) var errorMessage: String?
     private(set) var isWorking = false
 
@@ -27,7 +29,14 @@ final class AuthStore {
     init() {
         handle = Auth.auth().addStateDidChangeListener { [weak self] _, user in
             let next: State = user.map { .signedIn(uid: $0.uid, email: $0.email) } ?? .signedOut
-            Task { @MainActor in self?.state = next }
+            Task { @MainActor in
+                guard let self else { return }
+                if case .signedIn = next, self.isGuest {
+                    self.pendingGuestMigration = true
+                    self.setGuest(false)
+                }
+                self.state = next
+            }
         }
     }
 
@@ -49,7 +58,15 @@ final class AuthStore {
     }
 
     func signOut() {
+        if isGuest { setGuest(false); return }
         do { try Auth.auth().signOut() } catch { errorMessage = error.localizedDescription }
+    }
+
+    func continueAsGuest() { setGuest(true) }
+
+    private func setGuest(_ on: Bool) {
+        isGuest = on
+        UserDefaults.standard.set(on, forKey: "guestMode")
     }
 
     func clearError() { errorMessage = nil }

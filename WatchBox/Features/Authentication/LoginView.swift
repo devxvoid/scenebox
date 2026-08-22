@@ -8,7 +8,9 @@
 import SwiftUI
 
 struct LoginView: View {
+    var isSheet = false
     @Environment(AuthStore.self) private var auth
+    @Environment(\.dismiss) private var dismiss
 
     @State private var email = ""
     @State private var password = ""
@@ -27,9 +29,24 @@ struct LoginView: View {
                 fields
                 submitButton
                 switchModeButton
+                if !isSheet {
+                    guestButton
+                }
             }
             .frame(maxWidth: 460)
             .padding(.horizontal, 24)
+
+            if isSheet {
+                VStack {
+                    HStack {
+                        Spacer()
+                        Button("Cancel") { dismiss() }
+                            .foregroundStyle(.white)
+                            .padding()
+                    }
+                    Spacer()
+                }
+            }
         }
         .preferredColorScheme(.dark)
         .animation(.easeInOut(duration: 0.15), value: isCreating)
@@ -102,6 +119,18 @@ struct LoginView: View {
         .tint(Theme.accent)
         .foregroundStyle(Theme.onAccent)
         .disabled(!canSubmit)
+    }
+
+    private var guestButton: some View {
+        Button {
+            auth.continueAsGuest()
+        } label: {
+            Text("Continue as guest")
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(.white.opacity(0.8))
+        }
+        .buttonStyle(.plain)
+        .padding(.top, 12)
     }
 
     private var switchModeButton: some View {

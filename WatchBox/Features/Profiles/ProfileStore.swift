@@ -19,6 +19,7 @@ final class ProfileStore {
     private(set) var profiles: [Profile] = []
     private(set) var selected: Profile?
     private(set) var hasLoaded = false
+    private(set) var isGuest = false
     private(set) var isWorking = false
     var errorMessage: String?
 
@@ -61,6 +62,28 @@ final class ProfileStore {
         profiles = []
         selected = nil
         hasLoaded = false
+        isGuest = false
+    }
+
+    func activateGuest() {
+        deactivate()
+        isGuest = true
+        let guest = Self.storedGuest ?? Profile(id: "guest", name: "Guest",
+                                                colorIndex: Int.random(in: 0..<Profile.colors.count),
+                                                avatarURLString: nil, createdAt: Date())
+        Self.storedGuest = guest
+        profiles = [guest]
+        selected = guest
+        hasLoaded = true
+    }
+
+    private static var storedGuest: Profile? {
+        get {
+            UserDefaults.standard.data(forKey: "guestProfile").flatMap { try? JSONDecoder().decode(Profile.self, from: $0) }
+        }
+        set {
+            UserDefaults.standard.set(newValue.flatMap { try? JSONEncoder().encode($0) }, forKey: "guestProfile")
+        }
     }
 
     func select(_ profile: Profile) { selected = profile }
@@ -156,9 +179,15 @@ final class ProfileStore {
     // MARK: Helpers
 
     private func save(_ profile: Profile) async {
+        if isGuest {
+            Self.storedGuest = profile
+            profiles = [profile]
+            selected = profile
+            return
+        }
         guard let collection else { return }
         do {
-            try collection.document(profile.id).setData(from: profile, merge: true)
+            try collection.document(profile.id).setData(from: profile)
         } catch {
             errorMessage = "Couldn't save the profile. Please try again."
             return
