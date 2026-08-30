@@ -1,7 +1,7 @@
 #include <jni.h>
+#include <memory>
 #include <mutex>
 #include <string>
-#include <memory>
 #include <vector>
 
 #if __has_include(<libtorrent/session.hpp>) && __has_include(<libtorrent/magnet_uri.hpp>)
@@ -11,7 +11,6 @@
 #include <libtorrent/magnet_uri.hpp>
 #include <libtorrent/session.hpp>
 #include <libtorrent/torrent_handle.hpp>
-#include <libtorrent/torrent_status.hpp>
 #else
 #define SCENEBOX_HAS_LIBTORRENT 0
 #endif
@@ -37,7 +36,6 @@ Java_com_scenebox_NativeTorrentBridge_nativeStart(JNIEnv* env, jobject, jstring 
         lt::add_torrent_params params = lt::parse_magnet_uri(raw);
         params.save_path = "/data/data/com.scenebox/files/torrents";
         g_session = std::make_unique<lt::session>();
-        g_session->apply_settings({});
         g_handle = g_session->add_torrent(params);
         g_active = g_handle.is_valid();
     } catch (...) {
@@ -69,83 +67,79 @@ Java_com_scenebox_NativeTorrentBridge_nativeIsActive(JNIEnv*, jobject) {
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
-Java_com_scenebox_NativeTorrentBridge_nativeHasPiece(JNIEnv*, jobject, jint piece) {
+Java_com_scenebox_TorrentPieceBridge_nativeHasPiece(JNIEnv*, jobject, jint piece) {
 #if SCENEBOX_HAS_LIBTORRENT
     std::lock_guard<std::mutex> lock(g_mutex);
-    if (!g_handle.is_valid() || piece < 0) return JNI_FALSE;
-    return g_handle.have_piece(piece) ? JNI_TRUE : JNI_FALSE;
+    return g_handle.is_valid() && piece >= 0 && g_handle.have_piece(piece) ? JNI_TRUE : JNI_FALSE;
 #else
     return JNI_FALSE;
 #endif
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_scenebox_NativeTorrentBridge_nativeSetPriority(JNIEnv*, jobject, jint piece, jint priority) {
+Java_com_scenebox_TorrentPieceBridge_nativeSetPriority(JNIEnv*, jobject, jint piece, jint priority) {
 #if SCENEBOX_HAS_LIBTORRENT
     std::lock_guard<std::mutex> lock(g_mutex);
-    if (!g_handle.is_valid() || piece < 0) return;
-    g_handle.piece_priority(piece, static_cast<int>(priority));
+    if (g_handle.is_valid() && piece >= 0) {
+        g_handle.piece_priority(piece, static_cast<int>(priority));
+    }
 #endif
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_scenebox_NativeTorrentBridge_nativeSetDeadline(JNIEnv*, jobject, jint piece, jint deadlineMs) {
+Java_com_scenebox_TorrentPieceBridge_nativeSetDeadline(JNIEnv*, jobject, jint piece, jint deadlineMs) {
 #if SCENEBOX_HAS_LIBTORRENT
     std::lock_guard<std::mutex> lock(g_mutex);
-    if (!g_handle.is_valid() || piece < 0) return;
-    g_handle.set_piece_deadline(piece, deadlineMs, lt::torrent_handle::alert_when_available);
+    if (g_handle.is_valid() && piece >= 0) {
+        g_handle.set_piece_deadline(piece, deadlineMs, lt::torrent_handle::alert_when_available);
+    }
 #endif
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_scenebox_NativeTorrentBridge_nativeClearDeadline(JNIEnv*, jobject, jint piece) {
+Java_com_scenebox_TorrentPieceBridge_nativeClearDeadline(JNIEnv*, jobject, jint piece) {
 #if SCENEBOX_HAS_LIBTORRENT
     std::lock_guard<std::mutex> lock(g_mutex);
-    if (!g_handle.is_valid() || piece < 0) return;
-    g_handle.reset_piece_deadline(piece);
+    if (g_handle.is_valid() && piece >= 0) {
+        g_handle.reset_piece_deadline(piece);
+    }
 #endif
 }
 
 extern "C" JNIEXPORT jbyteArray JNICALL
-Java_com_scenebox_NativeTorrentBridge_nativeReadPiece(JNIEnv* env, jobject, jint piece) {
+Java_com_scenebox_TorrentPieceBridge_nativeReadPiece(JNIEnv* env, jobject, jint piece) {
 #if SCENEBOX_HAS_LIBTORRENT
+    if (piece < 0) return nullptr;
+
     std::unique_lock<std::mutex> lock(g_mutex);
-    if (!g_handle.is_valid() || !g_session || piece < 0) return nullptr;
+    if (!g_handle.is_valid() || !g_session) return nullptr;
 
-    if (!g_handle.have_piece(piece)) {
-        g_handle.set_piece_deadline(piece, 0, lt::torrent_handle::alert_when_available);
-        g_handle.read_piece(piece);
+    g_handle.set_piece_deadline(piece, 0, lt::torrent_handle::alert_when_available);
+    g_handle.read_piece(piece);
 
-        lt::read_piece_alert const* ready = nullptr;
-        for (;;) {
-            lock.unlock();
-            g_session->wait_for_alert(5000);
-            lock.lock();
-            if (!g_session) return nullptr;
+    for (;;) {
+        auto* session = g_session.get();
+        lock.unlock();
+        session->wait_for_alert(5000);
+        lock.lock();
 
-            std::vector<lt::alert*> alerts;
-            g_session->pop_alerts(&alerts);
-            for (lt::alert* alert : alerts) {
-                if (auto* rp = lt::alert_cast<lt::read_piece_alert>(alert)) {
-                    if (rp->piece == piece) ready = rp;
-                }
+        if (!g_session || !g_handle.is_valid()) return nullptr;
+
+        std::vector<lt::alert*> alerts;
+        g_session->pop_alerts(&alerts);
+        for (lt::alert* alert : alerts) {
+            if (auto* ready = lt::alert_cast<lt::read_piece_alert>(alert)) {
+                if (ready->piece != piece || !ready->buffer || ready->size <= 0) continue;
+
+                jbyteArray output = env->NewByteArray(ready->size);
+                if (!output) return nullptr;
+                env->SetByteArrayRegion(
+                    output, 0, ready->size,
+                    reinterpret_cast<const jbyte*>(ready->buffer.get()));
+                return output;
             }
-            if (ready || g_handle.have_piece(piece)) break;
-        }
-
-        if (ready && ready->buffer) {
-            const auto size = ready->size;
-            jbyteArray output = env->NewByteArray(size);
-            if (!output) return nullptr;
-            env->SetByteArrayRegion(output, 0, size,
-                reinterpret_cast<const jbyte*>(ready->buffer.get()));
-            return output;
         }
     }
-
-    g_handle.read_piece(piece);
-    lock.unlock();
-    return nullptr;
 #else
     return nullptr;
 #endif
