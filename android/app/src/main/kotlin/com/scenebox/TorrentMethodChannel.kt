@@ -10,9 +10,7 @@ class TorrentMethodChannel(context: Context) : MethodChannel.MethodCallHandler {
     private var controller: TorrentStreamController? = null
     private var selectedFile: TorrentFile? = null
 
-    fun attach(channel: MethodChannel) {
-        channel.setMethodCallHandler(this)
-    }
+    fun attach(channel: MethodChannel) = channel.setMethodCallHandler(this)
 
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
         try {
@@ -21,36 +19,26 @@ class TorrentMethodChannel(context: Context) : MethodChannel.MethodCallHandler {
                 "torrent.stop" -> {
                     controller?.close()
                     controller = null
+                    selectedFile = null
                     native.onMethodCall(call, result)
                 }
                 "torrent.status" -> native.onMethodCall(call, result)
                 "torrent.selectFile" -> {
-                    val index = call.argument<Int>("fileIndex")
-                    val path = call.argument<String>("path")
-                    val offset = call.argument<Long>("offset")
-                    val length = call.argument<Long>("length")
-                    if (index == null || path == null || offset == null || length == null || length < 0) {
+                    val file = parseFile(call)
+                    if (file == null) {
                         result.error("INVALID_FILE", "fileIndex, path, offset and length are required", null)
                         return
                     }
-                    selectedFile = TorrentFile(index, path, offset, length)
+                    selectedFile = file
                     result.success(mapOf("selected" to true))
                 }
                 "torrent.streamUrl" -> {
-                    val file = selectedFile ?: run {
-                        val index = call.argument<Int>("fileIndex")
-                        val path = call.argument<String>("path")
-                        val offset = call.argument<Long>("offset")
-                        val length = call.argument<Long>("length")
-                        if (index == null || path == null || offset == null || length == null || length < 0) {
-                            result.error("INVALID_FILE", "Select a valid torrent file first", null)
-                            return
-                        }
-                        TorrentFile(index, path, offset, length)
+                    val file = selectedFile ?: parseFile(call)
+                    if (file == null) {
+                        result.error("INVALID_FILE", "Select a valid torrent file first", null)
+                        return
                     }
                     selectedFile = file
-                    // The concrete byte reader is injected when the native piece
-                    // bridge is initialized by the application host.
                     val streamController = controller
                     if (streamController == null) {
                         result.error("STREAM_NOT_INITIALIZED", "Torrent byte reader is not initialized", null)
@@ -65,6 +53,15 @@ class TorrentMethodChannel(context: Context) : MethodChannel.MethodCallHandler {
         }
     }
 
+    private fun parseFile(call: MethodCall): TorrentFile? {
+        val index = call.argument<Int>("fileIndex") ?: return null
+        val path = call.argument<String>("path") ?: return null
+        val offset = (call.argument<Number>("offset") ?: return null).toLong()
+        val length = (call.argument<Number>("length") ?: return null).toLong()
+        if (offset < 0 || length < 0) return null
+        return TorrentFile(index, path, offset, length)
+    }
+
     fun setStreamController(value: TorrentStreamController?) {
         controller?.close()
         controller = value
@@ -73,5 +70,6 @@ class TorrentMethodChannel(context: Context) : MethodChannel.MethodCallHandler {
     fun close() {
         controller?.close()
         controller = null
+        selectedFile = null
     }
 }
